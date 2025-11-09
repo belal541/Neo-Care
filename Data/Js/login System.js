@@ -14,7 +14,7 @@ function LoginStyling() {
       return;
     }
 
-    alert(`مرحبًا بعودتك يا ${role} ${username}!`);
+    alert(`Hi ${username}, You login as ${role}`);
     localStorage.setItem("loggedInUser", role);
 
     setTimeout(() => {
@@ -76,4 +76,5 @@ function LogoutSystem() {
   localStorage.removeItem("loggedInUser");
   window.location.replace("../Html/Login-Form.html");
 }
+
 
