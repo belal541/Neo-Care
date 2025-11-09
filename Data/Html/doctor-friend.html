@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دكتور فريند برو - لوحة تحكم سريرية</title>
+    <!-- استيراد مكتبة Tailwind CSS و Phosphor Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/dist/umd/phosphor-icons.js"></script>
+    
+    <!-- خطوط عربية احترافية -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Kufi Arabic', sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        /* الثيمات */
+        .theme-light { background-color: #f8fafc; color: #1f2937; }
+        .theme-light .card-bg { background-color: #ffffff; border: 1px solid #e2e8f0; }
+        .theme-dark { background-color: #1e293b; color: #f9fafb; }
+        .theme-dark .card-bg { background-color: #334155; border: 1px solid #475569; }
+        .sidebar-bg { background-color: #0c4a6e; } /* ثابت للأناقة */
+
+        /* نمط الزر الرئيسي */
+        .btn-primary { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(59, 130, 246, 0.4); }
+
+        /* تعديل لمحتوى الملاحظات (whitespace-pre-wrap) */
+        .note-content { white-space: pre-wrap; line-height: 1.6; }
+
+        /* الحركة السينمائية لمدخل التطبيق (Cinematic Intro) */
+        @keyframes cinematic-reveal {
+            0% { opacity: 0; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .cinematic-box {
+            animation: cinematic-reveal 1.5s ease-out;
+            border-radius: 1.5rem; /* rounded-3xl */
+            box-shadow: 0 0 70px rgba(6, 182, 212, 0.9); /* ظل أكثر قوة */
+            background: linear-gradient(145deg, #1f293b, #0f172a); /* تدرج بسيط */
+        }
+
+        /* تحسين مظهر نتائج الكتب */
+        .book-chapter-header {
+            background-color: #0ea5e9; /* Sky Blue 500 */
+            color: white;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.5);
+        }
+
+        /* قائمة التنقل النشطة */
+         .nav-item-active {
+            background-color: rgba(255, 255, 255, 0.15); 
+            border-right: 4px solid #38bdf8; /* Sky 400 */
+            font-weight: 700;
+        }
+
+    </style>
+
+    <!-- تم إزالة استيراد Firebase SDKs بناءً على طلب المستخدم -->
+</head>
+<body class="theme-light">
+
+    <!-- شاشة المدخل السينمائي (Cinematic Intro) -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900 transition-opacity duration-1000">
+        <div class="cinematic-box flex flex-col items-center p-12 border border-cyan-500/50">
+            <i class="ph-fill ph-heartbeat text-7xl text-cyan-400 animate-pulse mb-6"></i>
+            <h1 class="text-6xl font-black text-white tracking-widest">
+                <span class="text-cyan-400">DOCTOR</span> FRIEND
+            </h1>
+            <p class="text-xl text-gray-400 mt-4 font-light">الاحترافية في متناول يدك.</p>
+        </div>
+    </div>
+
+    <!-- مودال التلخيص والتحرير (Modal) -->
+    <div id="llmModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center hidden transition-opacity duration-300 opacity-0">
+        <div class="modal-content card-bg p-6 rounded-2xl shadow-2xl transition-transform duration-300 transform scale-95 border-l-8 border-cyan-500 max-w-xl md:max-w-3xl">
+            <h3 id="modalTitle" class="text-2xl font-bold mb-4 border-b pb-2">✨ معالجة الملاحظة بالذكاء الاصطناعي</h3>
+            <div id="modalLoading" class="hidden text-center p-6 text-gray-500">
+                <i class="ph ph-circle-notch text-4xl animate-spin text-cyan-500"></i>
+                <p>جارِ تحليل الملاحظة... قد يستغرق الأمر بضع ثوانٍ.</p>
+            </div>
+            <div id="modalContentDiv" class="space-y-4">
+                <p class="font-medium">الملاحظة الأصلية:</p>
+                <textarea id="originalNoteContent" rows="3" readonly class="text-area-bg w-full p-3 rounded-lg border border-gray-300 opacity-70 text-sm"></textarea>
+                
+                <p class="font-medium">النتيجة المعالجة (<span id="resultTypeLabel"></span>):</p>
+                <div id="processedOutput" class="text-area-bg p-4 rounded-xl border border-blue-500/50 min-h-[150px] note-content overflow-y-auto max-h-96"></div>
+            </div>
+            <div class="flex justify-between mt-6">
+                 <button onclick="copyToClipboard('processedOutput')" class="py-2 px-4 rounded-xl font-bold bg-cyan-600 text-white hover:bg-cyan-700 transition duration-200 flex items-center">
+                    <i class="ph ph-copy text-xl ml-2"></i>
+                    نسخ النتيجة
+                </button>
+                <button onclick="closeLlmModal()" class="py-2 px-4 rounded-xl font-bold bg-gray-500 text-white hover:bg-gray-600 transition duration-200">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="flex min-h-screen">
+        
+        <!-- الشريط الجانبي (Sidebar) -->
+        <aside class="w-20 sm:w-64 sidebar-bg shadow-2xl p-4 flex flex-col items-center sm:items-start transition-all duration-300 z-10 text-white">
+            <div class="mb-10 mt-2 text-center sm:text-right w-full">
+                <h1 class="text-3xl font-extrabold text-cyan-300 hidden sm:block border-b border-cyan-300/30 pb-2">دكتور فريند <span class="text-sm font-light">PRO</span></h1>
+                <i class="ph-fill ph-stethoscope text-4xl text-cyan-300 sm:hidden animate-pulse"></i>
+            </div>
+
+            <!-- قائمة التنقل -->
+            <nav class="flex flex-col space-y-3 w-full">
+                <button onclick="switchView('Notes')" id="nav-Notes" class="nav-item flex items-center justify-center sm:justify-start p-3 rounded-xl transition-colors duration-200 focus:outline-none text-white/80 hover:bg-white/10">
+                    <i class="ph-fill ph-notebook text-2xl"></i>
+                    <span class="mr-3 font-medium text-base hidden sm:inline">إدارة الملاحظات</span>
+                </button>
+
+                <button onclick="switchView('Library')" id="nav-Library" class="nav-item flex items-center justify-center sm:justify-start p-3 rounded-xl transition-colors duration-200 focus:outline-none text-white/80 hover:bg-white/10">
+                    <i class="ph-fill ph-books text-2xl"></i>
+                    <span class="mr-3 font-medium text-base hidden sm:inline">المكتبة الرقمية (كتب)</span>
+                </button>
+
+                <button onclick="switchView('Cases')" id="nav-Cases" class="nav-item flex items-center justify-center sm:justify-start p-3 rounded-xl transition-colors duration-200 focus:outline-none text-white/80 hover:bg-white/10">
+                    <i class="ph-fill ph-brain text-2xl"></i>
+                    <span class="mr-3 font-medium text-base hidden sm:inline">الحالات المشابهة (موثق)</span>
+                </button>
+            </nav>
+            
+            <!-- زر تبديل الثيم واسم المستخدم -->
+            <div class="mt-auto w-full space-y-3">
+                 <p id="currentUserIdDisplay" class="text-xs opacity-70 truncate p-2 hidden sm:block">المعرف: <span id="user-id-placeholder">جارِ التحميل...</span></p>
+                <button onclick="toggleTheme()" class="w-12 h-12 sm:w-full flex items-center justify-center sm:justify-start p-3 rounded-xl transition-colors duration-200 focus:outline-none text-white/80 hover:bg-white/10">
+                    <i id="theme-icon" class="ph-fill ph-sun-dim text-2xl"></i>
+                    <span class="mr-3 font-medium text-sm hidden sm:inline">تبديل الثيم</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- منطقة المحتوى الرئيسية -->
+        <main id="content-area" class="flex-1 p-4 sm:p-8 overflow-y-auto">
+            
+            <!-- منطقة عرض الملاحظات (Notes View) -->
+            <div id="NotesView" class="view-content hidden space-y-8 max-w-6xl mx-auto">
+                <h2 class="text-3xl font-extrabold border-b pb-2">إدارة الملاحظات السريرية <i class="ph ph-notebook text-blue-500"></i></h2>
+                
+                <!-- إضافة ملاحظة جديدة (مختصر) -->
+                <div class="card-bg p-6 rounded-2xl shadow-xl">
+                    <h3 class="text-xl font-bold mb-4 border-b pb-2 text-cyan-500">تدوين ملاحظة سريعة</h3>
+                    <input id="noteTitle" type="text" placeholder="عنوان الملاحظة (مثال: زيارة المريض أحمد)" class="input-field w-full p-3 mb-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 text-lg border">
+                    <textarea id="noteContent" placeholder="اكتب ملاحظاتك الأولية غير المنظمة هنا..." rows="5" class="text-area-bg w-full p-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 border"></textarea>
+                    
+                    <div class="flex justify-between items-center mt-4">
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <input type="checkbox" id="noteReminder" class="h-5 w-5 rounded text-red-500 focus:ring-red-500 border-gray-400">
+                            <label for="noteReminder" class="font-medium text-red-500">متابعة عاجلة</label>
+                        </div>
+                        <button onclick="addNote()" class="btn-primary flex items-center bg-blue-600 text-white py-2 px-6 rounded-xl font-bold shadow-lg shadow-blue-500/50 hover:bg-blue-700">
+                            <i class="ph ph-check-circle text-xl ml-2"></i>
+                            حفظ الملاحظة
+                        </button>
+                    </div>
+                </div>
+
+                <!-- قائمة الملاحظات -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="notesList">
+                    <!-- الملاحظات سيتم تحميلها هنا بواسطة Firestore -->
+                </div>
+            </div>
+
+            <!-- منطقة المكتبة (Library View) -->
+            <div id="LibraryView" class="view-content hidden space-y-8 max-w-4xl mx-auto">
+                <h2 class="text-3xl font-extrabold border-b pb-2">المكتبة الرقمية (ابحث عن محتوى شامل) <i class="ph ph-books text-green-500"></i></h2>
+                <div class="card-bg p-6 rounded-2xl shadow-xl transition duration-500">
+                    <p class="text-sm opacity-80 mb-3">يستخدم هذا القسم محرك بحث موثوق لتوليد **محتوى شامل وموثق** حول الموضوع الذي تختاره، مباشرة من قاعدة بياناتنا المعرفية.</p>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <input id="libraryQuery" type="text" placeholder="اسم المرض أو الإجراء الطبي الذي تبحث عنه..." class="input-field w-full p-3 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200 text-lg border">
+                        <button onclick="searchLibrary()" class="btn-primary flex items-center bg-green-600 text-white py-3 px-6 rounded-xl font-bold shadow-lg shadow-green-500/50 hover:bg-green-700">
+                            <i class="ph ph-magnifying-glass text-xl ml-2"></i>
+                            بحث
+                        </button>
+                    </div>
+                </div>
+
+                <!-- نتيجة البحث عن الكتاب -->
+                <div id="libraryResult" class="hidden card-bg p-6 rounded-2xl shadow-xl transition duration-500 border-r-4 border-green-500 space-y-4">
+                    
+                    <!-- الهيدر الجديد للكتاب والمؤلف -->
+                    <div id="libraryBookHeader" class="book-chapter-header text-right">
+                        <p class="text-sm opacity-80 mb-1">فصل من الكتاب الموثق:</p>
+                        <h3 class="text-3xl font-black" id="bookTitleDisplay"></h3>
+                        <p class="text-lg font-medium mt-1 opacity-90" id="bookAuthorDisplay"></p>
+                    </div>
+
+                    <p class="text-xl font-semibold border-b pb-2 text-green-500">محتوى الفصل:</p>
+                    <div id="libraryOutput" class="text-base note-content leading-loose overflow-y-auto max-h-[80vh]"></div>
+                    <div id="librarySources" class="text-sm text-gray-500 mt-4 border-t pt-2"></div>
+                </div>
+                <div id="libraryLoading" class="hidden text-center p-6 text-gray-500">
+                    <i class="ph ph-circle-notch text-4xl animate-spin text-green-500"></i>
+                    <p>جارِ البحث في المصادر الطبية وتوليد محتوى شامل وموثق... قد يستغرق الأمر بضع ثوانٍ.</p>
+                </div>
+            </div>
+
+            <!-- منطقة الحالات المشابهة (Cases View) -->
+            <div id="CasesView" class="view-content hidden space-y-8 max-w-4xl mx-auto">
+                <h2 class="text-3xl font-extrabold border-b pb-2">تحليل الحالات السريرية الموثقة <i class="ph ph-brain text-purple-500"></i></h2>
+                <div class="card-bg p-6 rounded-2xl shadow-xl transition duration-500">
+                    <label for="symptomsInput" class="block font-medium mb-2 opacity-80">أدخل أعراض المريض بشكل مفصل:</label>
+                    <textarea id="symptomsInput" placeholder="مثال: حمى مفاجئة (39°C)، طفح جلدي في الجذع، آلام مفاصل حادة في الركبة والكوع، تاريخ عائلي لأمراض مناعية." rows="6" class="text-area-bg w-full p-3 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-200 border"></textarea>
+                    
+                    <button onclick="analyzeSymptoms()" class="btn-primary w-full mt-4 flex items-center justify-center bg-purple-600 text-white py-3 px-6 rounded-xl font-bold shadow-lg shadow-purple-500/50 hover:bg-purple-700">
+                        <i class="ph ph-lightning text-xl ml-2"></i>
+                        تشخيص تفريقي موثق
+                    </button>
+                </div>
+
+                <!-- نتيجة التحليل -->
+                <div id="casesResult" class="hidden card-bg p-6 rounded-2xl shadow-xl transition duration-500 border-r-4 border-purple-500 space-y-4">
+                    <p class="text-xl font-semibold border-b pb-2 text-purple-500">نتائج الحالات المقترحة (التشخيص التفريقي):</p>
+                    <div id="casesOutput" class="text-base note-content leading-loose"></div>
+                    <!-- إضافة قسم المصادر لحالات المشابهة -->
+                    <div id="casesSources" class="text-sm text-gray-500 mt-4 border-t pt-2"></div>
+                </div>
+                <div id="casesLoading" class="hidden text-center p-6 text-gray-500">
+                    <i class="ph ph-circle-notch text-4xl animate-spin text-purple-500"></i>
+                    <p>جارِ تحليل الأعراض والبحث الموثق عن التشخيصات التفريقية... يرجى الانتظار.</p>
+                </div>
+            </div>
+
+            <!-- منطقة الرسائل العامة (Message Box) -->
+            <div id="globalMessage" class="fixed bottom-4 right-4 p-4 rounded-xl shadow-2xl z-50 transition-all duration-300 opacity-0 hidden text-right" role="alert"></div>
+
+        </main>
+    </div>
+
+    <script src="../Js/doctor-friend.js"></script>
+</body>
+</html>

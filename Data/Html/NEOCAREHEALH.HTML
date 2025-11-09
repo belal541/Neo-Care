@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- تم تحديث العنوان هنا -->
+    <title>دكتور في جيبك - Neo care</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- تحميل مكتبة QR Code لإنشاء الرموز (qrcode.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- تحميل Google Maps API مع مكتبة 'places' لتفعيل البحث عن المستشفيات -->
+    <!-- تم إضافة مفتاح API الذي قدمه المستخدم هنا: -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAlY-CEUUnxaGa6LMwUMwxAY0BmsCXAAqU&callback=initMap&libraries=places"></script>
+    
+    <style>
+        /* إعداد الخط الافتراضي والثيم الداكن المطفأ */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #1e293b; /* أزرق غامق مطفأ (Slate-900) */
+            text-align: right;
+            color: #e2e8f0; /* لون نص فاتح للثيم الداكن */
+        }
+        /* لتجنب ظهور نص تحديد في العناصر المخفية */
+        [data-view="form"].hidden, [data-view="dashboard"].hidden, [data-view="map-search"].hidden {
+            display: none;
+        }
+        /* تصميم زر العودة */
+        #back-to-dashboard-button {
+            transition: all 0.3s ease;
+        }
+        /* لتحديد ارتفاع الخريطة لملء المساحة في صفحتها الجديدة */
+        #map {
+            width: 100%;
+            height: 60vh; /* ارتفاع أكبر للخريطة في صفحتها المخصصة */
+            min-height: 300px; 
+            border-radius: 1rem;
+        }
+        /* لإخفاء عناصر معينة عند الطباعة (لـ PDF/طباعة) */
+        @media print {
+            body > *:not(.printable-content) {
+                display: none !important;
+            }
+            .printable-content {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 9999;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- شريط التنقل العلوي (Header) -->
+    <header class="bg-slate-700 shadow-xl p-4 sticky top-0 z-10">
+        <div class="container mx-auto flex justify-between items-center">
+            
+            <!-- زر العودة يظهر في عرض النموذج فقط -->
+            <button id="back-to-dashboard-button" class="flex items-center text-gray-300 hover:text-teal-400 font-medium transition duration-300 p-2 rounded-lg hidden" onclick="showView('dashboard')">
+                <!-- أيقونة الرجوع (RTL) -->
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                العودة للرئيسية
+            </button>
+            
+            <!-- تم تحديث اسم التطبيق/النظام إلى "دكتور في جيبك" -->
+            <h1 class="text-2xl font-bold text-teal-400" id="main-title">دكتور في جيبك</h1>
+            
+            <!-- تم تحديث عنوان الخدمة إلى "Neo care" -->
+            <span class="text-xl font-extrabold text-gray-200 border-r-2 pr-4 border-teal-500">Neo care</span>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي (Dashboard View) -->
+    <div data-view="dashboard" class="container mx-auto p-4 md:p-8">
+        <h2 class="text-3xl font-extrabold text-white mb-8">اختر الخدمة المطلوبة</h2>
+        
+        <!-- شبكة الأقسام الرئيسية (معلومات صحية ومستشفى) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <!-- القسم الأول: معلوماتك الصحية -->
+            <div class="bg-slate-700 p-6 md:p-10 rounded-3xl shadow-2xl border-t-8 border-teal-500 transform hover:scale-[1.02] transition duration-300 cursor-pointer" onclick="showView('form')">
+                <h3 class="text-3xl font-extrabold text-teal-400 mb-4 flex items-center gap-3">
+                    <!-- Heart Icon -->
+                    <svg class="w-8 h-8 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    معلوماتك الصحية
+                </h3>
+                <p class="text-gray-300 mb-8 text-lg">
+                    تسجيل ومراجعة بيانات الطوارئ الطبية لضمان سلامتك في اللحظات الحرجة.
+                </p>
+                <button class="w-full bg-teal-500 hover:bg-teal-400 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition duration-300">
+                    انقر لملء النموذج
+                </button>
+            </div>
+
+            <!-- القسم الثاني: أقرب مستشفى (يفتح صفحة الخريطة) -->
+            <div class="bg-slate-700 p-6 md:p-10 rounded-3xl shadow-2xl border-t-8 border-indigo-500 transform hover:scale-[1.02] transition duration-300 cursor-pointer" onclick="showView('map-search')">
+                <h3 class="text-3xl font-extrabold text-indigo-400 mb-6 flex items-center gap-3">
+                    <!-- Hospital Icon -->
+                    <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16m-1-5H5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20v-4h4v4m-4-8h4v4h-4zM5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"></path></svg>
+                    أقرب مستشفى
+                </h3>
+                <p class="text-gray-300 mb-8 text-lg">
+                    استخدم خاصية تحديد الموقع للعثور على أقرب مستشفى أو مرفق طبي.
+                </p>
+                <button class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition duration-300">
+                    فتح صفحة الخريطة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- المحتوى الثاني (Health Form View) -->
+    <div data-view="form" class="hidden container mx-auto p-4 md:p-8 max-w-2xl">
+        <div class="bg-slate-700 p-6 md:p-10 rounded-3xl shadow-2xl border-t-8 border-teal-500">
+            <h2 class="text-3xl font-extrabold text-teal-400 mb-4 text-center">نموذج المعلومات الصحية للطوارئ</h2>
+            <p class="text-gray-300 mb-8 text-center">املأ التفاصيل الأساسية لضمان مساعدتك السريعة في الطوارئ.</p>
+
+            <form id="health-form" class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-300 mb-1">الاسم الكامل</label>
+                    <input type="text" id="name" placeholder="مثال: أحمد علي" required class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="age" class="block text-sm font-medium text-gray-300 mb-1">العمر</label>
+                        <input type="number" id="age" placeholder="مثال: 28" required class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                    </div>
+                    <div>
+                        <label for="blood_type" class="block text-sm font-medium text-gray-300 mb-1">فصيلة الدم</label>
+                        <select id="blood_type" required class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white appearance-none">
+                            <option value="" class="text-gray-500">اختر فصيلة الدم</option>
+                            <option class="text-white">A+</option><option class="text-white">A-</option><option class="text-white">B+</option><option class="text-white">B-</option>
+                            <option class="text-white">O+</option><option class="text-white">O-</option><option class="text-white">AB+</option><option class="text-white">AB-</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label for="gender" class="block text-sm font-medium text-gray-300 mb-1">النوع</label>
+                        <select id="gender" required class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white appearance-none">
+                            <option value="" class="text-gray-500">اختر</option>
+                            <option class="text-white">ذكر</option><option class="text-white">أنثى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="height" class="block text-sm font-medium text-gray-300 mb-1">الطول (سم)</label>
+                        <input type="number" id="height" placeholder="مثال: 175" class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                    </div>
+                    <div>
+                        <label for="weight" class="block text-sm font-medium text-gray-300 mb-1">الوزن (كجم)</label>
+                        <input type="number" id="weight" placeholder="مثال: 70" class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="conditions" class="block text-sm font-medium text-gray-300 mb-1">الحالات المرضية / المزمنة</label>
+                    <textarea id="conditions" placeholder="مثال: ضغط عالي، سكري..." class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white"></textarea>
+                </div>
+
+                <div>
+                    <label for="medications" class="block text-sm font-medium text-gray-300 mb-1">الأدوية الحالية</label>
+                    <input type="text" id="medications" placeholder="قائمة الأدوية (فاصلة بين كل دواء)" class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                </div>
+
+                <div>
+                    <label for="emergency_contact" class="block text-sm font-medium text-gray-300 mb-1">جهة اتصال في الطوارئ</label>
+                    <input type="text" id="emergency_contact" placeholder="اسم + رقم" required class="w-full p-3 border border-gray-600 rounded-lg focus:ring-teal-500 focus:border-teal-500 bg-slate-800 text-white">
+                </div>
+                
+                <div class="flex space-x-4 space-x-reverse pt-4">
+                    <button type="submit" class="flex-1 bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 rounded-xl transition duration-300 shadow-lg">
+                        <svg class="w-5 h-5 inline ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        حفظ المعلومات
+                    </button>
+                    <button type="reset" class="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-bold py-3 rounded-xl transition duration-300">
+                        تفريغ النموذج
+                    </button>
+                </div>
+            </form>
+
+            <!-- منطقة الرسالة (لإظهار النجاح/الخطأ) -->
+            <div id="form-message" class="mt-6 p-3 rounded-lg text-center font-medium hidden"></div>
+
+            <!-- إضافة قسم الأزرار المميزة لـ PDF و QR -->
+            <div id="action-buttons-container" class="mt-8 pt-6 border-t border-slate-600 space-y-4 hidden">
+                <h3 class="text-xl font-extrabold text-teal-400 text-center">خيارات البيانات المحفوظة</h3>
+                <button onclick="generatePDF()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition duration-300 shadow-xl flex items-center justify-center space-x-2 space-x-reverse">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    تنزيل كملف PDF
+                </button>
+                <button onclick="showQRCode()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition duration-300 shadow-xl flex items-center justify-center space-x-2 space-x-reverse">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    إنشاء رمز QR للمعلومات
+                </button>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- المحتوى الثالث (Map Search View) - الصفحة الجديدة لخدمة المستشفى -->
+    <div data-view="map-search" class="hidden container mx-auto p-4 md:p-8">
+        <h2 class="text-3xl font-extrabold text-white mb-8 text-center">تحديد موقعك والبحث عن المستشفيات</h2>
+        
+        <!-- حاوية الخريطة -->
+        <div class="bg-slate-700 p-4 rounded-3xl shadow-2xl border-t-8 border-indigo-500">
+             <div id="map-container-full" class="mb-6 bg-slate-900 border-4 border-gray-600 rounded-xl overflow-hidden">
+                <div id="map">
+                    <!-- رسالة البداية داخل div الخريطة -->
+                    <div id="initial-map-message" class="w-full h-full flex items-center justify-center">
+                        <p class="text-gray-400 font-medium text-lg text-center p-4">
+                            <svg class="w-8 h-8 mx-auto mb-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0l-4.243-4.243m-4.243 0a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            اضغط على زر البحث بالأسفل لتحديد موقعك
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- زر البحث المطلوب -->
+            <button id="search-hospital-button" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition duration-300" onclick="searchNearestHospital()">
+                ابحث عن أقرب مستشفى
+            </button>
+
+            <!-- رسائل الحالة -->
+            <div id="status-message" class="mt-4 p-3 rounded-lg text-center font-medium hidden"></div>
+
+            <!-- حاوية نتائج المستشفيات الجديدة -->
+            <div id="hospital-results" class="mt-6 p-4 bg-slate-800 rounded-xl hidden">
+                <h3 class="text-xl font-extrabold text-white mb-4 border-b border-gray-600 pb-2">المرافق الطبية القريبة التي تم العثور عليها:</h3>
+                <ul id="results-list" class="space-y-3"></ul>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Modal لرمز QR -->
+    <div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-700 p-8 rounded-xl shadow-2xl max-w-sm w-full">
+            <h3 class="text-2xl font-bold text-teal-400 mb-4 text-center">رمز QR لمعلومات الطوارئ</h3>
+            <!-- مكان عرض الـ QR code -->
+            <div id="qrcode" class="p-4 bg-white rounded-lg flex justify-center border-4 border-teal-500"></div>
+            <p class="text-sm text-gray-400 mt-4 text-center">يمكن لأي شخص مسح هذا الرمز للوصول لبياناتك الأساسية للطوارئ.</p>
+            <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="w-full mt-6 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition duration-300">
+                إغلاق
+            </button>
+        </div>
+    </div>
+
+
+    <script src="../Js/NEOCAREHEALH.js"></script>
+</body>
+</html>
