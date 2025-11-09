@@ -18,7 +18,7 @@ function LoginStyling() {
     localStorage.setItem("loggedInUser", role);
 
     setTimeout(() => {
-      window.location.replace("../Html/PEP.html");
+      window.location.replace("../Html/PEP.HTML");
     }, 1000);
   });
 };
@@ -76,3 +76,4 @@ function LogoutSystem() {
   localStorage.removeItem("loggedInUser");
   window.location.replace("../Html/Login-Form.html");
 }
+
